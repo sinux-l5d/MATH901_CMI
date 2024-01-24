@@ -85,10 +85,12 @@ def parse(instructions: list[str]) -> np.ndarray:
         v = p.group("var")
         vars.append((w, v))
 
-    vars.sort(key=lambda x: x[1])
+    economic_function = {"func": m.captures("func")[0], "funcparam": m.captures(
+        "funcparam")[0]}
+
     assert len(vars) == len(set([v for _, v in vars])
                             ), "Cannot have two variables with the same name"
-    print(vars)
+    # print(vars)
 
     # Inégalités
     inequalities = []
@@ -100,7 +102,6 @@ def parse(instructions: list[str]) -> np.ndarray:
         for part in m.captures("weights"):
             p = re.match(reSingleVar, part)
             assert p is not None, f"Invalid variable: {part}"
-            print(p.groupdict())
             w = p.group("weight")
             if w == "":
                 w = "1"
@@ -110,15 +111,57 @@ def parse(instructions: list[str]) -> np.ndarray:
         ineq["vars"].sort(key=lambda x: x[1])
         inequalities.append(ineq)
 
-    print(inequalities)
+    # print(inequalities)
+
+    # add missing variables in vars
+    for ineq in inequalities:
+        for _, v in ineq["vars"]:
+            if v not in [v for _, v in vars]:
+                vars.append((0, v))
+    vars.sort(key=lambda x: x[1])
+
+    varpos = {v: i for i, (_, v) in enumerate(vars)}
+
+    print("RECAP " + "="*20)
+    print("economic function:", economic_function)
+    print("vars:", " ".join([v for _, v in vars]))
+    print("varpos:", varpos)
+    print("weights:", vars)
+    print("inequalities:")
+    for ineq in inequalities:
+        print(" ".join([str(w) + v for w, v in ineq["vars"]]), " ".join(
+            ineq["op"]), " ".join(ineq["secmember"]))
+
+    # create the matrix
+    mat = np.zeros((len(inequalities)+1, len(vars)+len(inequalities)+1))
+
+    # add the economic function
+    for i, (w, v) in enumerate(vars):
+        mat[-1, i] = w
+
+    # add the inequalities
+    for i, ineq in enumerate(inequalities):
+        for w, v in ineq["vars"]:
+            mat[i, varpos[v]] = w
+        mat[i, len(vars)+i] = 1
+        mat[i, -1] = int(ineq["secmember"][0])
+
+    return mat
 
 
 if __name__ == "__main__":
     # simplex(mat)
     # print(mat)
-    print(reFuncEco)
-    m = re.match(reFuncEco, "max z = 30x + 50y + 40u + 60v")
-    print("func", m.captures("func"))
-    print("funcparam", m.captures("funcparam"))
-    print("weight", m.captures("weights"))
-    parse(["max z = 30x + 50y", "3x + 2y <= 1800", "x <= 400", "y <= 600"])
+    if False:
+        print(reFuncEco)
+        m = re.match(reFuncEco, "max z = 30x + 50y + 40u + 60v")
+        print("func", m.captures("func"))
+        print("funcparam", m.captures("funcparam"))
+        print("weight", m.captures("weights"))
+        print("="*20)
+    m1 = parse(["max z = 30x + 50y", "3x + 2y <= 1800", "x <= 400", "y <= 600"])
+    print(m1)
+    # Same but mixed up
+    m2 = parse(["max u = 50y + 30x", "2y + 3x <= 1800",
+               "1x <= 400", "y <= 600"])
+    assert np.array_equal(m1, m2)
