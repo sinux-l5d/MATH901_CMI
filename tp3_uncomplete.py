@@ -1,6 +1,8 @@
+import regex as re
 import numpy as np
 np.seterr(divide='ignore')
 np.set_printoptions(precision=3, suppress=True)
+
 
 mat = [[3, 2, 1, 0, 0, 1800],
        [1, 0, 0, 1, 0, 400],
@@ -46,6 +48,47 @@ def simplex(mat):
                 mat[i, :] -= (mat[i, k] * mat[l, :]) / pivot
 
 
+reSingleVar = r"(?P<sign>[+\-]?)\s*(?P<weight>\d+)(?P<var>[a-zA-Z])"
+reWeightGroup = rf"(?P<weights>{reSingleVar}\s*)+"
+reFuncEco = rf"(?P<func>max) (?P<funcparam>[a-zA-Z])\s*=\s*({reWeightGroup})"
+
+
+def parse(instruction: list[str]) -> np.ndarray:
+    """Parse a system of inequalities into a matrix
+        It must have exactly one max instruction with as many variables as you want. Example:
+            max z = 30x + 50y (+ 40u + 60v...)
+        and then as many inequalities as you want. Example:
+            3x + 2y (+ 4u + 5v...) <= 1800
+            x <= 400
+            y <= 600
+    """
+    # Fonction économique
+    instruction = [ins.strip() for ins in instruction]
+    economic_function = [ins for ins in instruction if ins.startswith("max")]
+    assert len(economic_function) == 1, "You must have exactly one max instruction"
+
+    economic_function = economic_function[0]
+    m = re.match(reFuncEco, economic_function)
+
+    vars = []
+    for part in m.captures("weights"):
+        p = re.match(reSingleVar, part)
+        w = int(p.group("sign") + p.group("weight"))
+        v = p.group("var")
+        vars.append((w, v))
+
+    vars.sort(key=lambda x: x[1])
+    assert len(vars) == len(set([v for _, v in vars])
+                            ), "Cannot have two variables with the same name"
+    print(vars)
+
+
 if __name__ == "__main__":
-    simplex(mat)
-    print(mat)
+    # simplex(mat)
+    # print(mat)
+    print(reFuncEco)
+    m = re.match(reFuncEco, "max z = 30x + 50y + 40u + 60v")
+    print("func", m.captures("func"))
+    print("funcparam", m.captures("funcparam"))
+    print("weight", m.captures("weights"))
+    parse(["max z = 30x + 50y - 40u + 60v"])
