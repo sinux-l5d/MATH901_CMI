@@ -62,6 +62,13 @@ def deg_oriented(mat):
         print(f"{n} deg_out={sum(mat[n,:])} deg_in={sum(mat[:,n])}")
 
 
+def deg_in(mat, node):
+    return sum(mat[:, node])
+
+
+def deg_out(mat, node):
+    return sum(mat[node, :])
+
 #####
 # 3 #
 #####
@@ -101,16 +108,36 @@ def nb_composantes_connexes(mat):
     dist = mat.astype(float)
     dist += np.identity(len(mat))  # To avaoid just rotating the matrix
     dist = np.linalg.matrix_power(dist, len(mat))  # to get all ateinable nodes
+    # dist[dist > 0] = 1  # To get a boolean matrix, but not needed
     cc_count = 1  # 1 because we assume the graph is connected in best case
+    # This part is wizardry
     for i in range(len(mat)):
         if dist[i, cc_count-1] == 0:
             cc_count += 1
     return cc_count
 
+#####
+# 6 #
+#####
+
+
+def rang(mat):
+    rangs = {}
+    for i in range(len(mat)):
+        if deg_in(mat, i) == 0:
+            rangs[i] = 0
+        else:
+            rangs[i] = None
+
+    for x in range(len(mat)):
+        for k in range(len(mat)):
+            if rangs[k] is None:
+
 
 if __name__ == "__main__":
     show(mat1, "mat1 (oriented)")
     show(mat2, "mat2 (non-oriented)")
+
     print("Non-oriented matrix:")
     deg_non_oriented(mat2)
     print("Oriented matrix:")
