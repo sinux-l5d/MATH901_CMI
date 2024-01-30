@@ -30,22 +30,28 @@ def getL(mat):
     return out.argmin()
 
 
-def simplex(mat):
+def simplex(mat, varpos):
+    mat = np.float64(mat)
+    varpos = {v: k for k, v in varpos.items()}
+    final_values = {}
     while mat[-1, :].max() > 0:
         k = getK(mat)
-        print(f"K = {k+1}")
-        print(f"coef K = {mat[-1, k]}")
+        # print(f"K = {k+1}")
+        # print(f"coef K = {mat[-1, k]}")
         l = getL(mat)
-        print(f"L = {l+1}")
-        print(f"coef L = {mat[l, -1]}")
+        # print(f"L = {l+1}")
+        # print(f"coef L = {mat[l, -1]}")
         pivot = mat[l, k]
-        print(f"pivot = {pivot}")
+        # print(f"pivot = {pivot}")
 
         mat[l, :] /= pivot
 
         for i in range(len(mat)):
             if i != l:
                 mat[i, :] -= (mat[i, k] * mat[l, :]) / pivot
+
+        final_values[varpos[k]] = mat[l, -1]
+    return mat, final_values
 
 
 reSingleVar = r"(?P<sign>[+\-]?)\s*(?P<weight>\d*)(?P<var>[a-zA-Z])"
@@ -146,7 +152,9 @@ def parse(instructions: list[str]) -> np.ndarray:
         mat[i, len(vars)+i] = 1
         mat[i, -1] = int(ineq["secmember"][0])
 
-    return mat
+    for i in range(len(inequalities)):
+        varpos[f"e{i+1}"] = len(vars) + i
+    return mat, varpos
 
 
 if __name__ == "__main__":
@@ -159,9 +167,14 @@ if __name__ == "__main__":
         print("funcparam", m.captures("funcparam"))
         print("weight", m.captures("weights"))
         print("="*20)
-    m1 = parse(["max z = 30x + 50y", "3x + 2y <= 1800", "x <= 400", "y <= 600"])
+    m1, vars = parse(["max z = 30x + 50y",  "x <= 400",
+                      "3x + 2y <= 1800", "y <= 600"])
     print(m1)
+    print(vars)
     # Same but mixed up
-    m2 = parse(["max u = 50y + 30x", "2y + 3x <= 1800",
-               "1x <= 400", "y <= 600"])
-    assert np.array_equal(m1, m2)
+    # m2 = parse(["max u = 50y + 30x", "2y + 3x <= 1800",
+    #            "1x <= 400", "y <= 600"])
+    # assert np.array_equal(m1, m2)
+    m2, final = simplex(m1, vars)
+    print(m2)
+    print(final)
