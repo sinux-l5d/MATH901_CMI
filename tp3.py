@@ -33,8 +33,8 @@ def getL(mat):
 def simplex(mat, varpos):
     mat = np.float64(mat)
     varpos = {v: k for k, v in varpos.items()}
-    final_values = {}
-    while mat[-1, :].max() > 0:
+    final_values = [x for x in varpos.values() if x.startswith("e")]
+    while mat[-1, :].max() > 0:  # :-1 ?
         k = getK(mat)
         # print(f"K = {k+1}")
         # print(f"coef K = {mat[-1, k]}")
@@ -48,9 +48,12 @@ def simplex(mat, varpos):
 
         for i in range(len(mat)):
             if i != l:
-                mat[i, :] -= (mat[i, k] * mat[l, :]) / pivot
+                # / pivot, actually not divided by pivot, idk why
+                mat[i, :] = mat[i, :] - (mat[i, k] * mat[l, :])
+        final_values[l] = varpos[k]
 
-        final_values[varpos[k]] = mat[l, -1]
+    final_values = {k: mat[i, -1] for i, k in enumerate(final_values)}
+
     return mat, final_values
 
 
@@ -128,15 +131,16 @@ def parse(instructions: list[str]) -> np.ndarray:
 
     varpos = {v: i for i, (_, v) in enumerate(vars)}
 
-    print("RECAP " + "="*20)
-    print("economic function:", economic_function)
-    print("vars:", " ".join([v for _, v in vars]))
-    print("varpos:", varpos)
-    print("weights:", vars)
-    print("inequalities:")
-    for ineq in inequalities:
-        print(" ".join([str(w) + v for w, v in ineq["vars"]]), " ".join(
-            ineq["op"]), " ".join(ineq["secmember"]))
+    if False:
+        print("RECAP " + "="*20)
+        print("economic function:", economic_function)
+        print("vars:", " ".join([v for _, v in vars]))
+        print("varpos:", varpos)
+        print("weights:", vars)
+        print("inequalities:")
+        for ineq in inequalities:
+            print(" ".join([str(w) + v for w, v in ineq["vars"]]), " ".join(
+                ineq["op"]), " ".join(ineq["secmember"]))
 
     # create the matrix
     mat = np.zeros((len(inequalities)+1, len(vars)+len(inequalities)+1))
@@ -167,8 +171,11 @@ if __name__ == "__main__":
         print("funcparam", m.captures("funcparam"))
         print("weight", m.captures("weights"))
         print("="*20)
-    m1, vars = parse(["max z = 30x + 50y",  "x <= 400",
-                      "3x + 2y <= 1800", "y <= 600"])
+
+    m1, vars = parse(["max z = 4x + 5y",
+                      "x + 2y <= 800",
+                      "2x + y <= 700",
+                      "x <= 300"])
     print(m1)
     print(vars)
     # Same but mixed up
